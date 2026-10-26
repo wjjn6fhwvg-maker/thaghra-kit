@@ -39,7 +39,7 @@ body{font-family:'Readex Pro',sans-serif;color:#F1F5F9;direction:rtl;position:re
 .stamp{position:absolute;left:0;top:0;border:7px solid %(a)s;color:%(a)s;font-weight:700;font-size:70px;padding:4px 32px;border-radius:18px;transform:rotate(-12deg);background:rgba(11,18,32,.6)}
 """
 def slide_html(s, i, n, w, h, theme='new'):
-    e = lambda k: html.escape(s.get(k, ""))
+    e = lambda k: html.escape(str(s.get(k, "")))
     kind = s.get("kind", "point")
     big = kind in ("hook", "cta")
     a, ag = THEMES.get(theme, THEMES["new"])
@@ -67,7 +67,7 @@ def slide_html(s, i, n, w, h, theme='new'):
 <div class="foot">{swipe}<b>@thaghra_ar</b></div></body></html>"""
 def main(src, out):
     post = json.load(open(src, encoding="utf-8"))
-    slides, slug, theme = post["slides"], post.get("slug", "post"), post.get("theme", "new")
+    slides, slug, theme = [dict(s, num=f"{int(s['num']):02d}") if str(s.get("num", "")).isdigit() else s for s in post["slides"]], post.get("slug", "post"), post.get("theme", "new")
     os.makedirs(out, exist_ok=True)
     car, vid = [], []
     with sync_playwright() as p:

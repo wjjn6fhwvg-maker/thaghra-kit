@@ -195,7 +195,7 @@ def main(src, out):
     slug = post.get("slug", "post")
     theme = post.get("theme", "new")
     th = THEMES.get(theme, THEMES["new"])
-    slides = [dict(s, dur=DUR.get(s.get("kind", "point"), 3.9)) for s in post["slides"]]
+    slides = [dict(s, dur=DUR.get(s.get("kind", "point"), 3.9), **({"num": f"{int(s['num']):02d}"} if str(s.get("num", "")).isdigit() else {})) for s in post["slides"]]
     os.makedirs(out, exist_ok=True)
     tmp = tempfile.mkdtemp()
     page = (PAGE.replace("__SLIDES__", json.dumps(slides, ensure_ascii=False)).replace("__THEME__", theme)
