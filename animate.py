@@ -1,7 +1,7 @@
 import json, sys, os, subprocess, shutil, tempfile
 from playwright.sync_api import sync_playwright
 FPS = 30
-DUR = {"hook": 4.2, "point": 3.9, "cta": 4.0}
+DUR = {"hook": 3.6, "point": 3.0, "cta": 3.6}
 THEMES = {
  "warn":  {"a": "#F97316", "ag": "249,115,22"},
  "hack":  {"a": "#A78BFA", "ag": "167,139,250"},
@@ -63,7 +63,7 @@ const ICONS = {
  local: '<path d="M12 21.5s7-6.5 7-11.5a7 7 0 0 0-14 0c0 5 7 11.5 7 11.5z" pathLength="1"/><circle cx="12" cy="10" r="2.6" pathLength="1"/>'
 };
 const CALM = (TH === 'aware' || TH === 'local');
-const STAG = CALM ? .12 : .09, WDUR = CALM ? .45 : .32;
+const STAG = CALM ? .06 : .05, WDUR = CALM ? .25 : .2;
 const rnd = (a) => { const x = Math.sin(a * 91.7 + 13.3) * 43758.5453; return x - Math.floor(x); };
 // background fx
 const fx = document.getElementById('fx'); const rain = [], sparks = [];
@@ -112,14 +112,15 @@ function render(t) {
     p.el.style.opacity = .25 + .6 * Math.pow(.5 + .5 * Math.sin(t * 2.2 + p.ph), 2); });
   let flash = 0;
   S.forEach((s, k) => {
-    const lt = t - s.start, el = s.el;
-    const vis = lt >= 0 && lt < s.dur;
+    const lt0 = t - s.start, el = s.el;
+    const lt = k === 0 ? lt0 + 1.6 : lt0;
+    const vis = lt0 >= 0 && lt0 < s.dur;
     el.style.opacity = vis ? 1 : 0;
     if (!vis) return;
-    const out = cl((lt - (s.dur - .3)) / .3);
-    el.style.transform = `translateY(-50%) translateX(${-out*140}px) scale(${1 + lt*.012})`;
+    const out = cl((lt0 - (s.dur - .3)) / .3);
+    el.style.transform = `translateY(-50%) translateX(${-out*140}px) scale(${1 + lt0*.012})`;
     el.style.opacity = 1 - out;
-    if (!CALM && lt < .18 && k > 0) flash = Math.max(flash, (.18 - lt) / .18 * .35);
+    if (!CALM && lt0 < .18 && k > 0) flash = Math.max(flash, (.18 - lt0) / .18 * .35);
     let d = .15;
     if (s.icon) { const p = back((lt - .02) / .4); s.icon.style.transform = `scale(${p})`; s.icon.style.opacity = cl(lt / .12);
       s.iconParts.forEach((e, i) => { e.style.strokeDasharray = 1; e.style.strokeDashoffset = 1 - ease((lt - .1 - i * .15) / .55); });
@@ -175,7 +176,7 @@ def sfx(events, extra, total, out_wav, tmp):
             clips += [(whoosh, s - 0.15), (glitch, s)]
         if e["hasNum"]:
             clips.append((hit, s + 0.05))
-        for i in range(e["words"]):
+        for i in range(e["words"] if k > 0 else 0):
             clips.append((tick, s + e["wd"] + i * e["stag"]))
     for at in extra:
         clips.append((hit, at))
