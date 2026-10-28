@@ -1,7 +1,7 @@
 import json, sys, os, subprocess, shutil, tempfile
 from playwright.sync_api import sync_playwright
 FPS = 30
-DUR = {"hook": 3.6, "point": 3.0, "cta": 3.6}
+DUR = {"hook": 4.2, "point": 3.9, "cta": 4.0}
 from render import THEMES as RT, ICONS as RI
 THEMES = {k: {"a": v[0], "ag": v[1]} for k, v in RT.items()}
 JICONS = json.dumps({k: v.replace('/>', ' pathLength="1"/>') for k, v in RI.items()})
@@ -52,7 +52,7 @@ const TH = "__THEME__";
 const S = __SLIDES__;
 const ICONS = __ICONS__;
 const CALM = (TH === 'aware' || TH === 'local');
-const STAG = CALM ? .06 : .05, WDUR = CALM ? .25 : .2;
+const STAG = CALM ? .12 : .09, WDUR = CALM ? .45 : .32;
 const LAT = /[A-Za-z][A-Za-z0-9+&_\-]*(?:[ .~][A-Za-z0-9][A-Za-z0-9+&_\-]*)*/g;
 const esc = x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const bidi = x => { let o = '', i = 0; for (const m of x.matchAll(LAT)) { o += esc(x.slice(i, m.index)) + '<span class="lt">' + esc(m[0].replace(/~/g, ' ')) + '</span>'; i = m.index + m[0].length; } return o + esc(x.slice(i)); };
@@ -105,7 +105,7 @@ function render(t) {
   let flash = 0;
   S.forEach((s, k) => {
     const lt0 = t - s.start, el = s.el;
-    const lt = k === 0 ? lt0 + 1.6 : lt0;
+    const lt = k === 0 ? lt0 + 2.5 : lt0;
     const vis = lt0 >= 0 && lt0 < s.dur;
     el.style.opacity = vis ? 1 : 0;
     if (!vis) return;
