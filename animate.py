@@ -105,7 +105,7 @@ function render(t) {
   let flash = 0;
   S.forEach((s, k) => {
     const lt0 = t - s.start, el = s.el;
-    const lt = k === 0 ? lt0 + 2.5 : lt0;
+    const lt = lt0;
     const vis = lt0 >= 0 && lt0 < s.dur;
     el.style.opacity = vis ? 1 : 0;
     if (!vis) return;
@@ -168,7 +168,7 @@ def sfx(events, extra, total, out_wav, tmp):
             clips += [(whoosh, s - 0.15), (glitch, s)]
         if e["hasNum"]:
             clips.append((hit, s + 0.05))
-        for i in range(e["words"] if k > 0 else 0):
+        for i in range(e["words"]):
             clips.append((tick, s + e["wd"] + i * e["stag"]))
     for at in extra:
         clips.append((hit, at))
