@@ -39,6 +39,7 @@ body{font-family:'Readex Pro',sans-serif;color:#F1F5F9;direction:rtl;position:re
 .num{font-family:'IBM Plex Mono',monospace;font-size:170px;color:var(--a);line-height:1;direction:ltr;text-align:right;text-shadow:0 0 40px rgba(var(--ag),.45)}
 .title{font-weight:700;line-height:1.35}
 .title span{display:inline-block;white-space:pre}
+.lt{direction:ltr;unicode-bidi:isolate;white-space:nowrap}
 .body{font-size:48px;line-height:1.6;color:#CBD5E1}
 .body div{opacity:0}
 .big{font-size:96px}.mid{font-size:76px}
@@ -64,6 +65,9 @@ const ICONS = {
 };
 const CALM = (TH === 'aware' || TH === 'local');
 const STAG = CALM ? .06 : .05, WDUR = CALM ? .25 : .2;
+const LAT = /[A-Za-z][A-Za-z0-9+&_\-]*(?:[ .\u00A0][A-Za-z0-9][A-Za-z0-9+&_\-]*)*/g;
+const esc = x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const bidi = x => { let o = '', i = 0; for (const m of x.matchAll(LAT)) { o += esc(x.slice(i, m.index)) + '<span class="lt">' + esc(m[0]) + '</span>'; i = m.index + m[0].length; } return o + esc(x.slice(i)); };
 const rnd = (a) => { const x = Math.sin(a * 91.7 + 13.3) * 43758.5453; return x - Math.floor(x); };
 // background fx
 const fx = document.getElementById('fx'); const rain = [], sparks = [];
@@ -85,12 +89,12 @@ S.forEach((s, k) => {
     const st = document.createElement('s'); c.appendChild(st); el.appendChild(c); s.claimEl = c; s.strike = st; }
   if (s.kind === 'point' && s.num) { const n = document.createElement('div'); n.className='num'; n.textContent = s.num; el.appendChild(n); s.numEl = n; }
   const ti = document.createElement('div'); ti.className = 'title ' + (big ? 'big' : 'mid'); ti.style.position = 'relative';
-  s.words = s.title.split(' ').map((w, i, a) => { const sp = document.createElement('span'); sp.textContent = w + (i < a.length - 1 ? ' ' : ''); sp.dataset.w = sp.textContent; ti.appendChild(sp); return sp; });
+  s.words = s.title.replace(LAT, m => m.replace(/ /g, '\u00A0')).split(' ').map((w, i, a) => { const sp = document.createElement('span'); sp.innerHTML = bidi(w + (i < a.length - 1 ? ' ' : '')); sp.dataset.w = sp.textContent; sp.dataset.h = sp.innerHTML; ti.appendChild(sp); return sp; });
   el.appendChild(ti);
   if (s.kind === 'hook' && TH === 'rumor') { const st = document.createElement('div'); st.className = 'stamp'; st.textContent = 'إشاعة'; el.appendChild(st); s.stamp = st; }
   s.lines = [];
   if (s.body) { const b = document.createElement('div'); b.className = 'body';
-    s.body.split('\n').forEach(l => { const d = document.createElement('div'); d.textContent = l; b.appendChild(d); s.lines.push(d); });
+    s.body.split('\n').forEach(l => { const d = document.createElement('div'); d.innerHTML = bidi(l); b.appendChild(d); s.lines.push(d); });
     el.appendChild(b); }
   root.appendChild(el);
 });
@@ -139,7 +143,7 @@ function render(t) {
       w.style.filter = TH === 'hack' ? 'none' : `blur(${(1-p)*(CALM?6:10)}px)`;
       if (TH === 'hack') { const real = w.dataset.w;
         if (lt - st < .45 && lt >= st) { let g = ''; for (let j = 0; j < real.trim().length; j++) g += GL[Math.floor(rnd(fr * 3.1 + i * 17 + j) * GL.length)]; w.textContent = g + (real.endsWith(' ') ? ' ' : ''); w.style.color = 'var(--a)'; }
-        else { w.textContent = real; w.style.color = ''; } } });
+        else { w.innerHTML = w.dataset.h; w.style.color = ''; } } });
     const ld = d + s.words.length * STAG + .25;
     if (s.stamp) { const sd = ld + .1; const p = cl((lt - sd) / .22);
       s.stamp.style.opacity = p; s.stamp.style.transform = `rotate(-12deg) scale(${2.6 - 1.6 * ease(p)})`; }

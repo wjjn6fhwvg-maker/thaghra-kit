@@ -1,4 +1,4 @@
-import json, sys, os, html, subprocess
+import json, sys, os, html, subprocess, re
 from playwright.sync_api import sync_playwright
 THEMES = {"warn": ("#F97316", "249,115,22"), "hack": ("#A78BFA", "167,139,250"), "new": ("#2DD4BF", "45,212,191"),
  "rumor": ("#EF4444", "239,68,68"), "aware": ("#38BDF8", "56,189,248"), "local": ("#4ADE80", "74,222,128")}
@@ -32,14 +32,22 @@ body{font-family:'Readex Pro',sans-serif;color:#F1F5F9;direction:rtl;position:re
  font-size:30px;color:#94A3B8}
 .foot b{font-family:'IBM Plex Mono',monospace;font-weight:500;color:%(a)s;direction:ltr}
 .swipe{color:#F1F5F9}
+.lt{direction:ltr;unicode-bidi:isolate;white-space:nowrap}
 .icon{width:130px;height:130px;align-self:flex-start;filter:drop-shadow(0 0 18px rgba(%(ag)s,.6))}
 .icon *{fill:none;stroke:%(a)s;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .claim{position:relative;align-self:flex-start;font-size:44px;color:#94A3B8;line-height:1.4}
 .claim s{position:absolute;right:-10px;left:-10px;top:52%%;height:7px;background:%(a)s;border-radius:4px}
 .stamp{position:absolute;left:0;top:0;border:7px solid %(a)s;color:%(a)s;font-weight:700;font-size:70px;padding:4px 32px;border-radius:18px;transform:rotate(-12deg);background:rgba(11,18,32,.6)}
 """
+LAT = re.compile(r'[A-Za-z][A-Za-z0-9+&_\-]*(?:[ .][A-Za-z0-9][A-Za-z0-9+&_\-]*)*')
+def bidi(t):
+    o, i = [], 0
+    for m in LAT.finditer(t):
+        o.append(html.escape(t[i:m.start()]) + '<span class="lt">' + html.escape(m.group()) + '</span>')
+        i = m.end()
+    return ''.join(o) + html.escape(t[i:])
 def slide_html(s, i, n, w, h, theme='new'):
-    e = lambda k: html.escape(str(s.get(k, "")))
+    e = lambda k: bidi(str(s.get(k, "")))
     kind = s.get("kind", "point")
     big = kind in ("hook", "cta")
     a, ag = THEMES.get(theme, THEMES["new"])
