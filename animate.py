@@ -2,14 +2,9 @@ import json, sys, os, subprocess, shutil, tempfile
 from playwright.sync_api import sync_playwright
 FPS = 30
 DUR = {"hook": 3.6, "point": 3.0, "cta": 3.6}
-THEMES = {
- "warn":  {"a": "#F97316", "ag": "249,115,22"},
- "hack":  {"a": "#A78BFA", "ag": "167,139,250"},
- "new":   {"a": "#2DD4BF", "ag": "45,212,191"},
- "rumor": {"a": "#EF4444", "ag": "239,68,68"},
- "aware": {"a": "#38BDF8", "ag": "56,189,248"},
- "local": {"a": "#4ADE80", "ag": "74,222,128"},
-}
+from render import THEMES as RT, ICONS as RI
+THEMES = {k: {"a": v[0], "ag": v[1]} for k, v in RT.items()}
+JICONS = json.dumps({k: v.replace('/>', ' pathLength="1"/>') for k, v in RI.items()})
 PAGE = r"""<!doctype html><html lang="ar"><head><meta charset="utf-8"><style>
 :root{--a:__A__;--ag:__AG__}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -55,19 +50,12 @@ body{font-family:'Readex Pro',sans-serif;color:#F1F5F9;direction:rtl;position:re
 <script>
 const TH = "__THEME__";
 const S = __SLIDES__;
-const ICONS = {
- warn: '<path d="M12 3 L22 20 H2 Z" pathLength="1"/><path d="M12 9v5" pathLength="1"/><path d="M12 17.2v.1" pathLength="1"/>',
- hack: '<rect x="4" y="11" width="16" height="10" rx="2" pathLength="1"/><path d="M8 11V7a4 4 0 0 1 7.6-1.7" pathLength="1"/><path d="M12.5 12.5l-1.5 3 2 1.2-1.5 3" pathLength="1"/>',
- new: '<rect x="6" y="2.5" width="11" height="19" rx="2.2" pathLength="1"/><path d="M10.5 18.5h2" pathLength="1"/><path d="M20 1.5v4M18 3.5h4" pathLength="1"/>',
- rumor: '<circle cx="12" cy="12" r="9" pathLength="1"/><path d="M9 9l6 6" pathLength="1"/><path d="M15 9l-6 6" pathLength="1"/>',
- aware: '<path d="M12 2.5l8 3v6c0 5-3.5 8.6-8 10.5-4.5-1.9-8-5.5-8-10.5v-6z" pathLength="1"/><path d="M8.5 12l2.5 2.5 4.5-5" pathLength="1"/>',
- local: '<path d="M12 21.5s7-6.5 7-11.5a7 7 0 0 0-14 0c0 5 7 11.5 7 11.5z" pathLength="1"/><circle cx="12" cy="10" r="2.6" pathLength="1"/>'
-};
+const ICONS = __ICONS__;
 const CALM = (TH === 'aware' || TH === 'local');
 const STAG = CALM ? .06 : .05, WDUR = CALM ? .25 : .2;
-const LAT = /[A-Za-z][A-Za-z0-9+&_\-]*(?:[ .\u00A0][A-Za-z0-9][A-Za-z0-9+&_\-]*)*/g;
+const LAT = /[A-Za-z][A-Za-z0-9+&_\-]*(?:[ .~][A-Za-z0-9][A-Za-z0-9+&_\-]*)*/g;
 const esc = x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const bidi = x => { let o = '', i = 0; for (const m of x.matchAll(LAT)) { o += esc(x.slice(i, m.index)) + '<span class="lt">' + esc(m[0]) + '</span>'; i = m.index + m[0].length; } return o + esc(x.slice(i)); };
+const bidi = x => { let o = '', i = 0; for (const m of x.matchAll(LAT)) { o += esc(x.slice(i, m.index)) + '<span class="lt">' + esc(m[0].replace(/~/g, ' ')) + '</span>'; i = m.index + m[0].length; } return o + esc(x.slice(i)); };
 const rnd = (a) => { const x = Math.sin(a * 91.7 + 13.3) * 43758.5453; return x - Math.floor(x); };
 // background fx
 const fx = document.getElementById('fx'); const rain = [], sparks = [];
@@ -89,7 +77,7 @@ S.forEach((s, k) => {
     const st = document.createElement('s'); c.appendChild(st); el.appendChild(c); s.claimEl = c; s.strike = st; }
   if (s.kind === 'point' && s.num) { const n = document.createElement('div'); n.className='num'; n.textContent = s.num; el.appendChild(n); s.numEl = n; }
   const ti = document.createElement('div'); ti.className = 'title ' + (big ? 'big' : 'mid'); ti.style.position = 'relative';
-  s.words = s.title.replace(LAT, m => m.replace(/ /g, '\u00A0')).split(' ').map((w, i, a) => { const sp = document.createElement('span'); sp.innerHTML = bidi(w + (i < a.length - 1 ? ' ' : '')); sp.dataset.w = sp.textContent; sp.dataset.h = sp.innerHTML; ti.appendChild(sp); return sp; });
+  s.words = s.title.replace(LAT, m => m.replace(/ /g, '~')).split(' ').map((w, i, a) => { const sp = document.createElement('span'); sp.innerHTML = bidi(w + (i < a.length - 1 ? ' ' : '')); sp.dataset.w = sp.textContent; sp.dataset.h = sp.innerHTML; ti.appendChild(sp); return sp; });
   el.appendChild(ti);
   if (s.kind === 'hook' && TH === 'rumor') { const st = document.createElement('div'); st.className = 'stamp'; st.textContent = 'إشاعة'; el.appendChild(st); s.stamp = st; }
   s.lines = [];
@@ -203,7 +191,7 @@ def main(src, out):
     slides = [dict(s, dur=DUR.get(s.get("kind", "point"), 3.9), **({"num": f"{int(s['num']):02d}"} if str(s.get("num", "")).isdigit() else {})) for s in post["slides"]]
     os.makedirs(out, exist_ok=True)
     tmp = tempfile.mkdtemp()
-    page = (PAGE.replace("__SLIDES__", json.dumps(slides, ensure_ascii=False)).replace("__THEME__", theme)
+    page = (PAGE.replace("__ICONS__", JICONS).replace("__SLIDES__", json.dumps(slides, ensure_ascii=False)).replace("__THEME__", theme)
             .replace("__AG__", th["ag"]).replace("__A__", th["a"]))
     with sync_playwright() as p:
         b = p.chromium.launch()

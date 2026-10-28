@@ -1,4 +1,4 @@
-import json, sys, os, html, subprocess, re
+import json, sys, os, html, re
 from playwright.sync_api import sync_playwright
 THEMES = {"warn": ("#F97316", "249,115,22"), "hack": ("#A78BFA", "167,139,250"), "new": ("#2DD4BF", "45,212,191"),
  "rumor": ("#EF4444", "239,68,68"), "aware": ("#38BDF8", "56,189,248"), "local": ("#4ADE80", "74,222,128")}
@@ -90,24 +90,10 @@ def main(src, out):
                 pg.screenshot(path=f)
                 acc.append(f)
         b.close()
-    d, x = 4.0, 0.5
-    cmd = ["ffmpeg", "-y", "-loglevel", "error"]
-    for f in vid:
-        cmd += ["-loop", "1", "-t", str(d), "-i", f]
-    fc, last = [], "0:v"
-    for i in range(1, len(vid)):
-        o = f"v{i}"
-        fc.append(f"[{last}][{i}:v]xfade=transition=slideleft:duration={x}:offset={i*(d-x):.2f}[{o}]")
-        last = o
-    mp4 = os.path.join(out, f"{slug}_reel.mp4")
-    if fc:
-        cmd += ["-filter_complex", ";".join(fc), "-map", f"[{last}]"]
-    cmd += ["-r", "30", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-crf", "20", mp4]
-    subprocess.run(cmd, check=True)
     cover = os.path.join(out, f"{slug}_cover.png")
     os.replace(vid[0], cover)
     for f in vid[1:]:
         os.remove(f)
-    print("\n".join(car + [cover, mp4]))
+    print("\n".join(car + [cover]))
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2])
