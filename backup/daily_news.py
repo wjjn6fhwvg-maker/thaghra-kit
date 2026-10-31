@@ -40,20 +40,85 @@ def http_json(url, payload):
         return json.loads(r.read().decode())
 
 
+FEEDS = [
+    "https://www.bleepingcomputer.com/feed/",
+    "https://feeds.feedburner.com/TheHackersNews",
+    "https://www.securityweek.com/feed/",
+    "https://therecord.media/feed",
+    "https://9to5mac.com/feed/",
+    "https://www.androidauthority.com/feed/",
+    "https://www.theverge.com/rss/index.xml",
+    "https://techcrunch.com/feed/",
+]
+
+
+def rss_news(days=3, per_feed=8):
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+    out = []
+    for f in FEEDS:
+        try:
+            req = urllib.request.Request(f, headers={"User-Agent": "Mozilla/5.0"})
+            root = ET.fromstring(urllib.request.urlopen(req, timeout=30).read())
+        except Exception:
+            continue
+        n = 0
+        for it in root.iter():
+            tag = it.tag.split("}")[-1]
+            if tag not in ("item", "entry"):
+                continue
+            g = lambda name: next((c for c in it if c.tag.split("}")[-1] == name), None)
+            title = (g("title").text or "").strip() if g("title") is not None else ""
+            ln = g("link")
+            link = (ln.get("href") or ln.text or "").strip() if ln is not None else ""
+            d = g("pubDate") if g("pubDate") is not None else (g("published") if g("published") is not None else g("updated"))
+            try:
+                dt = parsedate_to_datetime(d.text) if d is not None and "," in d.text else datetime.datetime.fromisoformat(d.text.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+                if dt < cutoff:
+                    continue
+                ds = dt.strftime("%Y-%m-%d")
+            except Exception:
+                ds = ""
+            desc = g("description") if g("description") is not None else g("summary")
+            dtext = re.sub(r"<[^>]+>|\s+", " ", (desc.text or "") if desc is not None else "").strip()[:400]
+            out.append(f"- [{ds}] {title}\n  {link}\n  {dtext}")
+            n += 1
+            if n >= per_feed:
+                break
+    return "\n".join(out)
+
+
 def ask_gemini(prompt):
     key = os.environ["GEMINI_API_KEY"]
     models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"] if m]
-    body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "tools": [{"google_search": {}}],
-            "generationConfig": {"temperature": 0.4}}
-    res, errs = None, []
-    for model in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
-        try:
-            res = http_json(url, body)
+    def body(text, search):
+        b = {"contents": [{"role": "user", "parts": [{"text": text}]}],
+             "generationConfig": {"temperature": 0.4}}
+        if search:
+            b["tools"] = [{"google_search": {}}]
+        return b
+    res, errs, rss = None, [], None
+    # 1) بحث قوقل داخل Gemini، 2) لو رفض: أخبار RSS من المصادر الموثوقة بدون بحث
+    for search in (True, False):
+        if not search:
+            rss = rss_news()
+            if not rss:
+                break
+            text = prompt + "\n\n## ما عندك بحث ويب اليوم\nاختر الخبر من هالأخبار بس (من مصادر ثغرة الموثوقة)، واعتمد على كلامها فقط، وحط رابط الخبر في source_comment:\n" + rss
+        for model in models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+            try:
+                res = http_json(url, body(prompt if search else text, search))
+                break
+            except urllib.error.HTTPError as e:
+                msg = e.read().decode(errors="ignore")
+                m = re.search(r'"message":\s*"([^"]{0,160})', msg)
+                errs.append(f"{model}{' +بحث' if search else ''}: {e.code} {m.group(1) if m else msg[:160]}")
+        if res is not None:
             break
-        except urllib.error.HTTPError as e:
-            errs.append(f"{model}: {e.code} {e.read().decode()[:300]}")
     if res is None:
         raise RuntimeError("Gemini رفض الطلب:\n" + "\n".join(errs))
     cand = res["candidates"][0]
