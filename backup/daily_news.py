@@ -134,6 +134,38 @@ def ask_gemini(prompt):
     return json.loads(m.group(1)), links
 
 
+def gemini_plain(text):
+    key = os.environ["GEMINI_API_KEY"]
+    for model in [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"] if m]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+        try:
+            res = http_json(url, {"contents": [{"role": "user", "parts": [{"text": text}]}], "generationConfig": {"temperature": 0.2}})
+            return "".join(p.get("text", "") for p in res["candidates"][0]["content"]["parts"])
+        except Exception:
+            continue
+    return ""
+
+
+def review(data, rules):
+    """المراجع الثاني: يصحح مخالفات القواعد بدون ما يضيف معلومات."""
+    ask = ("أنت المراجع الثاني لقناة ثغرة. هذي قواعد الكتابة:\n" + rules +
+           "\n\nراجع المنشور التالي سطر سطر كأنك مشاهد عادي أول مرة يسمع بالخبر، وصحح بس اللي يخالف القواعد: "
+           "الكلمات الرسمية الممنوعة، أسماء الشركات والمنتجات المكتوبة بحروف عربية (رجعها إنجليزي مثل OpenAI)، "
+           "الجمل الناقصة أو اللي ما تنفهم لحالها، الخطاف المبالغ أو اللي يوحي إن الخطر مستمر وهو انحل، "
+           "والكابشن اللي يقول شي مو في الشرائح. لا تضيف أي معلومة أو رقم أو اسم مو موجود. "
+           "رجّع نفس JSON بنفس الشكل والمفاتيح داخل ```json ... ``` بدون أي كلام ثاني.\n\n```json\n"
+           + json.dumps(data, ensure_ascii=False) + "\n```")
+    text = gemini_plain(ask)
+    m = re.search(r"```json\s*(\{.*\})\s*```", text, re.S) or re.search(r"(\{.*\})", text, re.S)
+    try:
+        new = json.loads(m.group(1))
+        if new.get("post", {}).get("slides") and new.get("caption"):
+            return new, True
+    except Exception:
+        pass
+    return data, False
+
+
 def tg(method, data, files=None):
     token = os.environ["TELEGRAM_BOT_TOKEN"]
     url = f"https://api.telegram.org/bot{token}/{method}"
@@ -168,11 +200,13 @@ def main():
     if "--from-file" in sys.argv:
         data = json.load(open(sys.argv[sys.argv.index("--from-file") + 1], encoding="utf-8"))
         links = []
+        reviewed = False
     else:
         recent = "، ".join(x["title"] for x in log[-20:]) or "ما فيه"
         prompt = open(os.path.join(HERE, "news_prompt.txt"), encoding="utf-8").read()
         prompt = prompt.replace("{TODAY}", now.strftime("%Y-%m-%d")).replace("{WEEKDAY}", days[now.weekday()]).replace("{RECENT}", recent)
         data, links = ask_gemini(prompt)
+        data, reviewed = review(data, prompt[prompt.find("## الشرائح"):prompt.find("## المخرج")])
 
     post = data["post"]
     post["slug"] = re.sub(r"[^a-z0-9_]", "_", post.get("slug", "post").lower())[:40] or "post"
@@ -185,7 +219,7 @@ def main():
     slug = post["slug"]
     title = post["slides"][0]["title"]
     msg = (f"📰 منشور ثغرة لليوم (النظام الاحتياطي) — {now.strftime('%Y-%m-%d')}\n"
-           f"⚠️ راجع الكلام والمصادر قبل النشر\n\n"
+           f"⚠️ راجع الكلام والمصادر قبل النشر{' (راجعه مراجع ثاني ✅)' if reviewed else ''}\n\n"
            f"🗞 {data.get('summary', '')}\n📅 تاريخ الخبر: {data.get('news_date', '')}\n\n"
            f"📋 الكابشن:\n{data.get('caption', '')}\n\n"
            f"💬 تعليق المصدر:\n{data.get('source_comment', '')}\n")
@@ -196,9 +230,11 @@ def main():
         chat = os.environ["TELEGRAM_CHAT_ID"]
         send_text(msg)
         tg("sendVideo", {"chat_id": chat, "caption": title[:1000]}, {"video": os.path.join(OUT, f"{slug}_motion_sfx.mp4")})
-        tg("sendDocument", {"chat_id": chat}, {"document": os.path.join(OUT, f"{slug}_cover.png")})
-        for f in sorted(glob.glob(os.path.join(OUT, f"{slug}_carousel_*.png"))):
-            tg("sendDocument", {"chat_id": chat}, {"document": f})
+        imgs = [os.path.join(OUT, f"{slug}_cover.png")] + sorted(glob.glob(os.path.join(OUT, f"{slug}_carousel_*.png")))
+        for i in range(0, len(imgs), 10):
+            part = imgs[i:i + 10]
+            media = [{"type": "document", "media": f"attach://f{j}"} for j in range(len(part))]
+            tg("sendMediaGroup", {"chat_id": chat, "media": json.dumps(media)}, {f"f{j}": f for j, f in enumerate(part)})
     else:
         print(msg)
 
