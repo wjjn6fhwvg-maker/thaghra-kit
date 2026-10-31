@@ -7,7 +7,7 @@
   TELEGRAM_BOT_TOKEN  توكن البوت من @BotFather
   TELEGRAM_CHAT_ID    رقم المحادثة حقك
 اختياري:
-  GEMINI_MODEL        اسم الموديل (الافتراضي gemini-2.5-flash)
+  GEMINI_MODEL        اسم الموديل (الافتراضي gemini-3.8-flash)
 
 تجربة بدون Gemini:  python3 backup/daily_news.py --from-file sample.json
 """
@@ -42,7 +42,7 @@ def http_json(url, payload):
 
 def ask_gemini(prompt):
     key = os.environ["GEMINI_API_KEY"]
-    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash"] if m]
+    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"] if m]
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "tools": [{"google_search": {}}],
             "generationConfig": {"temperature": 0.4}}
