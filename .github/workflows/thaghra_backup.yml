@@ -2,8 +2,15 @@ name: ثغرة - الأخبار الاحتياطية
 
 on:
   schedule:
-    - cron: "47 14 * * *"   # 5:47 العصر بتوقيت الرياض
-  workflow_dispatch: {}      # تشغيل يدوي من تبويب Actions
+    - cron: "47 14 * * *"   # 5:47 العصر بتوقيت الرياض: الأخبار اليومية
+    - cron: "47 8 * * *"    # 11:47 الصبح بتوقيت الرياض: التنبيهات العاجلة
+  workflow_dispatch:         # تشغيل يدوي من تبويب Actions
+    inputs:
+      mode:
+        description: "daily = الأخبار اليومية، urgent = التنبيهات العاجلة"
+        type: choice
+        options: [daily, urgent]
+        default: daily
 
 permissions:
   contents: write
@@ -49,7 +56,9 @@ jobs:
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python backup/daily_news.py
+          MODE: ${{ (github.event.schedule == '47 8 * * *' || inputs.mode == 'urgent') && 'urgent' || 'daily' }}
+        run: |
+          if [ "$MODE" = "urgent" ]; then python backup/daily_news.py --urgent; else python backup/daily_news.py; fi
 
       - name: احفظ سجل المنشورات
         if: steps.keys.outputs.ok == 'true'

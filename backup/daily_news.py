@@ -17,6 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HERE = os.path.dirname(os.path.abspath(__file__))
 LOG = os.path.join(HERE, "posted.json")
 OUT = os.path.join(ROOT, "out")
+URGENT = "--urgent" in sys.argv
 
 
 def riyadh_now():
@@ -77,10 +78,10 @@ def gnews(q, ar):
     return "https://news.google.com/rss/search?q=" + urllib.parse.quote(q + " when:3d") + "&" + hl
 
 
-def rss_news(days=3, per_feed=6):
+def rss_news(days=3, per_feed=6, hours=None):
     import xml.etree.ElementTree as ET
     from email.utils import parsedate_to_datetime
-    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - (datetime.timedelta(hours=hours) if hours else datetime.timedelta(days=days))
     out = []
     for f in FEEDS + [gnews(q, True) for q in GNEWS_AR] + [gnews(q, False) for q in GNEWS_EN]:
         try:
@@ -129,7 +130,7 @@ def ask_gemini(prompt):
     # 1) بحث قوقل داخل Gemini، 2) لو رفض: أخبار RSS من المصادر الموثوقة بدون بحث
     for search in (True, False):
         if not search:
-            rss = rss_news()
+            rss = rss_news(hours=26) if URGENT else rss_news()
             if not rss:
                 break
             text = prompt + "\n\n## ما عندك بحث ويب اليوم\nاختر الخبر من هالأخبار بس (من مصادر ثغرة الموثوقة)، واعتمد على كلامها فقط، وحط رابط الخبر في source_comment:\n" + rss
@@ -250,8 +251,15 @@ def main():
     else:
         recent = "، ".join(x["title"] for x in log[-20:]) or "ما فيه"
         prompt = open(os.path.join(HERE, "news_prompt.txt"), encoding="utf-8").read()
+        if URGENT:
+            rules = open(os.path.join(HERE, "urgent_rules.txt"), encoding="utf-8").read()
+            a, b = prompt.find("## اختيار الخبر"), prompt.find("## المصادر")
+            prompt = prompt[:a] + rules + prompt[b:]
         prompt = prompt.replace("{TODAY}", now.strftime("%Y-%m-%d")).replace("{WEEKDAY}", days[now.weekday()]).replace("{RECENT}", recent)
         data, links = ask_gemini(prompt)
+        if URGENT and (not data.get("urgent") or "post" not in data):
+            print("ما فيه خبر عاجل اليوم")
+            return
         data, reviewed = review(data, prompt[prompt.find("## الشرائح"):prompt.find("## المخرج")])
 
     post = data["post"]
@@ -264,7 +272,8 @@ def main():
 
     slug = post["slug"]
     title = post["slides"][0]["title"]
-    msg = (f"📰 منشور ثغرة لليوم (النظام الاحتياطي) — {now.strftime('%Y-%m-%d')}\n"
+    head = "🚨 تنبيه عاجل" if URGENT else "📰 منشور ثغرة لليوم"
+    msg = (f"{head} (النظام الاحتياطي) — {now.strftime('%Y-%m-%d')}\n"
            f"⚠️ راجع الكلام والمصادر قبل النشر{' (راجعه مراجع ثاني ✅)' if reviewed else ''}\n\n"
            f"🗞 {data.get('summary', '')}\n📅 تاريخ الخبر: {data.get('news_date', '')}\n\n"
            f"📋 الكابشن:\n{data.get('caption', '')}\n\n"
