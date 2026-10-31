@@ -5,7 +5,7 @@
 
 1) مفتاح Gemini
    - افتح aistudio.google.com وسجل بحساب قوقل
-   - اضغط Get API key ثم Create API key وانسخه
+   - افتح aistudio.google.com/apikey ← Create API key ← Create project ← Create key وانسخه (لا تختار أي شي فيه billing أو paid)
 
 2) بوت تليجرام
    - في تليجرام كلّم @BotFather واكتب /newbot وسمّه، وانسخ التوكن اللي يعطيك
@@ -19,7 +19,7 @@
        GEMINI_API_KEY
        TELEGRAM_BOT_TOKEN
        TELEGRAM_CHAT_ID
-   - (اختياري) GEMINI_MODEL لو تبي موديل غير gemini-2.5-flash
+   - (اختياري) GEMINI_MODEL لو تبي موديل غير gemini-3.8-flash
 
 4) جرّبه
    - في المستودع افتح تبويب Actions ← "ثغرة - الأخبار الاحتياطية" ← Run workflow
