@@ -41,23 +41,48 @@ def http_json(url, payload):
 
 
 FEEDS = [
+    # أمنية
     "https://www.bleepingcomputer.com/feed/",
     "https://feeds.feedburner.com/TheHackersNews",
     "https://www.securityweek.com/feed/",
     "https://therecord.media/feed",
-    "https://9to5mac.com/feed/",
-    "https://www.androidauthority.com/feed/",
+    "https://krebsonsecurity.com/feed/",
+    # تقنية عامة
     "https://www.theverge.com/rss/index.xml",
     "https://techcrunch.com/feed/",
+    "https://feeds.arstechnica.com/arstechnica/index",
+    "https://www.engadget.com/rss.xml",
+    "https://9to5mac.com/feed/",
+    "https://www.androidauthority.com/feed/",
+    "https://www.wired.com/feed/category/security/latest/rss",
+    # رسمية
+    "https://www.cisa.gov/cybersecurity-advisories/all.xml",
+    "https://telegram.org/blog/rss",
 ]
 
+# أخبار قوقل: الجهات الرسمية السعودية، صفحات الشركات، Reuters و AP، ومنصات التحقق
+GNEWS_AR = ["الهيئة الوطنية للأمن السيبراني", "هيئة الاتصالات والفضاء والتقنية", "البنك المركزي السعودي ساما احتيال",
+            "واس الأمن السيبراني", "سدايا", "هيئة الحكومة الرقمية", "أبشر تحذير", "وزارة الداخلية احتيال",
+            "stc تحذير احتيال", "موبايلي احتيال", "زين السعودية احتيال", "تحذير احتيال بنك السعودية",
+            "مسبار تقنية", "فتبينوا تقنية", "واتساب ميزة جديدة", "تحديث آيفون أمني"]
+GNEWS_EN = ["site:apple.com security", "Apple Security Releases", "Android Security Bulletin", "site:blog.google security",
+            "Microsoft security update", "Samsung security update", "site:about.fb.com", "site:blog.whatsapp.com",
+            "site:openai.com", "site:newsroom.tiktok.com", "site:newsroom.snap.com", "X Safety",
+            "site:reuters.com cybersecurity", "site:apnews.com cybersecurity", "AFP Fact Check technology",
+            "Reuters Fact Check technology"]
 
-def rss_news(days=3, per_feed=8):
+
+def gnews(q, ar):
+    hl = "hl=ar&gl=SA&ceid=SA:ar" if ar else "hl=en-US&gl=US&ceid=US:en"
+    return "https://news.google.com/rss/search?q=" + urllib.parse.quote(q + " when:3d") + "&" + hl
+
+
+def rss_news(days=3, per_feed=6):
     import xml.etree.ElementTree as ET
     from email.utils import parsedate_to_datetime
     cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
     out = []
-    for f in FEEDS:
+    for f in FEEDS + [gnews(q, True) for q in GNEWS_AR] + [gnews(q, False) for q in GNEWS_EN]:
         try:
             req = urllib.request.Request(f, headers={"User-Agent": "Mozilla/5.0"})
             root = ET.fromstring(urllib.request.urlopen(req, timeout=30).read())
@@ -146,9 +171,30 @@ def gemini_plain(text):
     return ""
 
 
+def page_text(url, limit=12000):
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        raw = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", errors="ignore")
+        raw = re.sub(r"(?is)<(script|style|nav|footer|header)[^>]*>.*?</\1>", " ", raw)
+        t = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", raw))
+        return html_unescape(t)[:limit]
+    except Exception:
+        return ""
+
+
+def html_unescape(t):
+    import html
+    return html.unescape(t)
+
+
 def review(data, rules):
     """المراجع الثاني: يصحح مخالفات القواعد بدون ما يضيف معلومات."""
-    ask = ("أنت المراجع الثاني لقناة ثغرة. هذي قواعد الكتابة:\n" + rules +
+    src = ""
+    for u in re.findall(r"https?://\S+", str(data.get("source_url", "")) + " " + str(data.get("source_comment", "")))[:2]:
+        if "news.google.com" not in u:
+            src += page_text(u.rstrip(").,،")) + "\n"
+    srcpart = ("\n\n## نص المصدر\nقارن كل جملة في الشرائح والكابشن بهالنص، وأي رقم أو اسم أو تاريخ أو معلومة مو مكتوبة فيه صراحة احذفها أو عدّلها:\n" + src) if src.strip() else ""
+    ask = ("أنت المراجع الثاني لقناة ثغرة. هذي قواعد الكتابة:\n" + rules + srcpart +
            "\n\nراجع المنشور التالي سطر سطر كأنك مشاهد عادي أول مرة يسمع بالخبر، وصحح بس اللي يخالف القواعد: "
            "الكلمات الرسمية الممنوعة، أسماء الشركات والمنتجات المكتوبة بحروف عربية (رجعها إنجليزي مثل OpenAI)، "
            "الجمل الناقصة أو اللي ما تنفهم لحالها، الخطاف المبالغ أو اللي يوحي إن الخطر مستمر وهو انحل، "
@@ -222,7 +268,8 @@ def main():
            f"⚠️ راجع الكلام والمصادر قبل النشر{' (راجعه مراجع ثاني ✅)' if reviewed else ''}\n\n"
            f"🗞 {data.get('summary', '')}\n📅 تاريخ الخبر: {data.get('news_date', '')}\n\n"
            f"📋 الكابشن:\n{data.get('caption', '')}\n\n"
-           f"💬 تعليق المصدر:\n{data.get('source_comment', '')}\n")
+           f"💬 تعليق المصدر:\n{data.get('source_comment', '')}\n"
+           f"🔗 رابط الخبر: {data.get('source_url', '')}\n")
     if links:
         msg += "\n🔗 الروابط اللي بحث فيها:\n" + "\n".join(links[:8])
 
