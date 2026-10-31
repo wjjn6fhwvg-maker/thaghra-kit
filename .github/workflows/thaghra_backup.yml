@@ -1,0 +1,61 @@
+name: ثغرة - الأخبار الاحتياطية
+
+on:
+  schedule:
+    - cron: "47 14 * * *"   # 5:47 العصر بتوقيت الرياض
+  workflow_dispatch: {}      # تشغيل يدوي من تبويب Actions
+
+permissions:
+  contents: write
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: تأكد إن المفاتيح موجودة
+        id: keys
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ] || [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "المفاتيح مو موجودة، ما راح يشتغل"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.keys.outputs.ok == 'true'
+        with:
+          python-version: "3.11"
+
+      - name: تثبيت الأدوات والخطوط
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fontconfig
+          pip install -q playwright pillow
+          python -m playwright install --with-deps chromium
+          cd "$(mktemp -d)" && git clone -q --depth 1 --filter=blob:none --sparse https://github.com/google/fonts.git gf && cd gf
+          git sparse-checkout set ofl/readexpro ofl/ibmplexmono
+          mkdir -p ~/.fonts && cp ofl/readexpro/*.ttf ofl/ibmplexmono/IBMPlexMono-Medium.ttf ~/.fonts/ && fc-cache -f
+
+      - name: سوّ المنشور وأرسله على تليجرام
+        if: steps.keys.outputs.ok == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python backup/daily_news.py
+
+      - name: احفظ سجل المنشورات
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          git config user.name "thaghra-bot"
+          git config user.email "thaghra-bot@users.noreply.github.com"
+          git add backup/posted.json
+          git commit -m "سجل منشور $(date +%F)" || true
+          git push || true
