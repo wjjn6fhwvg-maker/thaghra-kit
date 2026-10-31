@@ -11,7 +11,7 @@
 
 تجربة بدون Gemini:  python3 backup/daily_news.py --from-file sample.json
 """
-import json, os, re, sys, subprocess, datetime, urllib.request, urllib.parse, uuid, glob
+import json, os, re, sys, subprocess, datetime, urllib.request, urllib.parse, urllib.error, uuid, glob
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -42,12 +42,20 @@ def http_json(url, payload):
 
 def ask_gemini(prompt):
     key = os.environ["GEMINI_API_KEY"]
-    model = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash"] if m]
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "tools": [{"google_search": {}}],
             "generationConfig": {"temperature": 0.4}}
-    res = http_json(url, body)
+    res, errs = None, []
+    for model in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+        try:
+            res = http_json(url, body)
+            break
+        except urllib.error.HTTPError as e:
+            errs.append(f"{model}: {e.code} {e.read().decode()[:300]}")
+    if res is None:
+        raise RuntimeError("Gemini رفض الطلب:\n" + "\n".join(errs))
     cand = res["candidates"][0]
     text = "".join(p.get("text", "") for p in cand["content"]["parts"])
     links = []
