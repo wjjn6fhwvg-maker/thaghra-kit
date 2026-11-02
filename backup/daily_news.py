@@ -296,6 +296,11 @@ def main():
 
     log.append({"date": now.strftime("%Y-%m-%d"), "title": title})
     save_log(log)
+    # نسخة كاملة للمنشور عشان فريق التطوير يراجعها
+    hist = os.path.join(HERE, "history")
+    os.makedirs(hist, exist_ok=True)
+    json.dump({"date": now.strftime("%Y-%m-%d"), "mode": "urgent" if URGENT else "daily", **data},
+              open(os.path.join(hist, f"{now.strftime('%Y-%m-%d')}_{slug}.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,59 @@
+name: ثغرة - فريق التطوير
+
+on:
+  schedule:
+    - cron: "0 23 * * *"     # كل يوم 2:00 الفجر بتوقيت الرياض: ملاحظات الفريق
+    - cron: "43 9 * * 0"     # الأحد 12:43 الظهر بتوقيت الرياض: تقرير الأسبوع على تليجرام
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "daily = ملاحظات اليوم، weekly = تقرير الأسبوع"
+        type: choice
+        options: [daily, weekly]
+        default: daily
+
+permissions:
+  contents: write
+
+concurrency:
+  group: thaghra-team
+  cancel-in-progress: false
+
+jobs:
+  team:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: تأكد إن المفاتيح موجودة
+        id: keys
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then echo "ok=false" >> "$GITHUB_OUTPUT"; else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/setup-python@v5
+        if: steps.keys.outputs.ok == 'true'
+        with:
+          python-version: "3.11"
+
+      - name: شغّل الفريق
+        if: steps.keys.outputs.ok == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MODE: ${{ (github.event.schedule == '43 9 * * 0' || inputs.mode == 'weekly') && 'weekly' || 'daily' }}
+        run: python team/team.py "$MODE"
+
+      - name: احفظ السجل
+        if: steps.keys.outputs.ok == 'true'
+        run: |
+          git config user.name "thaghra-team"
+          git config user.email "thaghra-team@users.noreply.github.com"
+          git add team || true
+          git commit -m "فريق التطوير $(date +%F)" || true
+          git pull --rebase -q || true
+          git push || true
