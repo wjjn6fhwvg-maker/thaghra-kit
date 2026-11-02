@@ -269,6 +269,13 @@ def main():
     json.dump(post, open(pj, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     subprocess.run([sys.executable, "render.py", pj, OUT], cwd=ROOT, check=True)
     subprocess.run([sys.executable, "animate.py", pj, OUT], cwd=ROOT, check=True)
+    # الغلاف أول إطار في الفيديو (عشان تيك توك ياخذه غلاف)
+    sl = post["slug"]
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-t", "0.2", "-i", f"{sl}_cover.png", "-f", "lavfi", "-t", "0.2",
+                    "-i", "anullsrc=r=44100:cl=stereo", "-i", f"{sl}_motion_sfx.mp4", "-filter_complex",
+                    "[0:v]scale=1080:1920,fps=30,format=yuv420p,setsar=1[v0];[2:v]fps=30,format=yuv420p,setsar=1[v1];[v0][1:a][v1][2:a]concat=n=2:v=1:a=1[v][a]",
+                    "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-crf", "19", "-preset", "medium", "-c:a", "aac", "-b:a", "160k", "tmp_cover.mp4"], cwd=OUT, check=True)
+    os.replace(os.path.join(OUT, "tmp_cover.mp4"), os.path.join(OUT, f"{sl}_motion_sfx.mp4"))
 
     slug = post["slug"]
     title = post["slides"][0]["title"]
