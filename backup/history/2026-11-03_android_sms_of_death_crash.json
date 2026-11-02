@@ -1,0 +1,44 @@
+{
+ "date": "2026-11-03",
+ "mode": "daily",
+ "post": {
+  "slug": "android_sms_of_death_crash",
+  "theme": "hack",
+  "slides": [
+   {
+    "kind": "hook",
+    "kicker": "ثغرة",
+    "title": "رسالة نصية خفية تعطل أندرويد؟",
+    "body": "رسالة قصيرة تعلق نظام أندرويد، ونزل لها تحديث."
+   },
+   {
+    "kind": "point",
+    "num": 1,
+    "title": "وش صار؟",
+    "body": "باحثين أمنيين كشفوا ثغرة خطيرة.\nرسالة نصية SMS حجمها 8 بايت بس توصلك وتطفي الجوال بدون ما تفتحها."
+   },
+   {
+    "kind": "point",
+    "num": 2,
+    "title": "ليش يهمك؟",
+    "body": "الرسالة توصل بالخفاء وتلعب بالنظام.\nتعلق الجهاز في إعادة تشغيل مستمرة، وتمنع الاتصال وتوقف خدمات الطوارئ."
+   },
+   {
+    "kind": "point",
+    "num": 3,
+    "title": "مين يتأثر؟",
+    "body": "أجهزة أندرويد اللي ما وصلها آخر تحديث أمني.\nوبعض الجوالات القديمة مثل أندرويد 12 و 13 اللي وقفت عنها التحديثات."
+   },
+   {
+    "kind": "cta",
+    "title": "وش تسوي الحين؟",
+    "body": "1. افتح الإعدادات في جوالك.\n2. ادخل على النظام ثم تحديث النظام وثبّت التحديث.\n3. لو جهازك قديم وما يوصله دعم، فكر تغيّره.\nأرسلها لأهلك."
+   }
+  ]
+ },
+ "caption": "رسالة نصية SMS خفية حجمها 8 بايت بس، تقدر تطفي جوال أندرويد وتخليه يعيد تشغيل ورا بعض بدون ما تفتحها.\nالثغرة تأثر على الأجهزة اللي ما نزلت آخر تحديث أمني.\nشارك المنشور مع أي شخص معاه أندرويد عشان يتأكد من جهازه 📲\nمتى آخر مرة حدثت فيها نظام جوالك؟ 👇\n#ثغرة #أندرويد #أمن_سيبراني #تقنية #توعية",
+ "source_comment": "المصدر: BleepingComputer و gHacks",
+ "source_url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxOcEJHR1JnVFhNRWc5bzlQTVRDU3pKUDNubGl2QTZUNmZ0VlJNRWdzT0ZBN1RvaDhGZWNiYUg4X0RWV3BRNUQ2d2ZubzlXNDdYRDRBTWh6cWFZcmdxWVE0OWxfc2ZQZ19WSjhLUlpvd04xNFpEdjIyOVMtUnppOWpJVmtXOGhhM1JMMThRdDdlaU5JRzVxR0xvbWVka3kzNktWQzJTQmxQTldrRHBXVEgzdW9vNnZHVEU?oc=5",
+ "summary": "ثغرة أمنية جديدة في نظام أندرويد تُعرف باسم SMS of Death تسمح بتعطيل الهاتف وإدخاله في حلقة إعادة تشغيل عبر إرسال رسالة نصية قصيرة وخفية بحجم 8 بايت فقط.",
+ "news_date": "2026-10-31"
+}
