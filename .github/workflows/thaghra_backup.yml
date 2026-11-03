@@ -56,6 +56,7 @@ jobs:
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EVENT: ${{ github.event_name }}
           MODE: ${{ (github.event.schedule == '47 8 * * *' || inputs.mode == 'urgent') && 'urgent' || 'daily' }}
         run: |
           if [ "$MODE" = "urgent" ]; then python backup/daily_news.py --urgent; else python backup/daily_news.py; fi

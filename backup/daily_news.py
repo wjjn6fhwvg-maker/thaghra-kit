@@ -241,6 +241,12 @@ def send_text(text):
 
 def main():
     now = riyadh_now()
+    # GitHub أحياناً يأخر التشغيل المجدول ساعات. لو تأخر كثير، لا ترسل شي (التشغيل اليدوي ما يتأثر)
+    if os.environ.get("EVENT") == "schedule":
+        ok = (11, 12, 13) if URGENT else (17, 18, 19)
+        if now.hour not in ok:
+            print(f"تأخر التشغيل المجدول ({now.strftime('%H:%M')})، ما أرسلت شي")
+            return
     days = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
     log = load_log()
 
