@@ -7,8 +7,8 @@
 
 الأسابيع الزوجية = رقم الأسبوع في السنة زوجي (`date +%V`).
 
-4. **غلاف تيك توك (أول إطار في الفيديو):** تيك توك ما ياخذ الغلاف من Metricool، فياخذ أول إطار من الفيديو. فبعد ما يطلع ملف motion_sfx.mp4 وقبل الرفع، خل صورة الغلاف (cover.png) أول إطار في الفيديو بهالأمر (من داخل مجلد out، وبدّل SLUG):
+4. **غلاف تيك توك (أول ثانية ونص في الفيديو):** تيك توك ما ياخذ الغلاف من Metricool، وما ياخذ أول إطار بالضبط: يختار إطار تقريباً عند الثانية 0.6-0.7 (تأكدنا من منشور 2026-11-11 اللي طلع غلافه بدون عنوان لأن صورة الغلاف كانت 0.2 ثانية بس). فبعد ما يطلع ملف motion_sfx.mp4 وقبل الرفع، خل صورة الغلاف (cover.png) ثابتة أول **1.5 ثانية** من الفيديو بهالأمر (من داخل مجلد out، وبدّل SLUG):
 ```
-ffmpeg -y -loop 1 -t 0.2 -i SLUG_cover.png -f lavfi -t 0.2 -i anullsrc=r=44100:cl=stereo -i SLUG_motion_sfx.mp4 -filter_complex "[0:v]scale=1080:1920,fps=30,format=yuv420p,setsar=1[v0];[2:v]fps=30,format=yuv420p,setsar=1[v1];[v0][1:a][v1][2:a]concat=n=2:v=1:a=1[v][a]" -map "[v]" -map "[a]" -c:v libx264 -crf 19 -preset medium -c:a aac -b:a 160k tmp.mp4 && mv tmp.mp4 SLUG_motion_sfx.mp4
+ffmpeg -y -loop 1 -t 1.5 -i SLUG_cover.png -f lavfi -t 1.5 -i anullsrc=r=44100:cl=stereo -i SLUG_motion_sfx.mp4 -filter_complex "[0:v]scale=1080:1920,fps=30,format=yuv420p,setsar=1[v0];[2:v]fps=30,format=yuv420p,setsar=1[v1];[v0][1:a][v1][2:a]concat=n=2:v=1:a=1[v][a]" -map "[v]" -map "[a]" -c:v libx264 -crf 19 -preset medium -c:a aac -b:a 160k tmp.mp4 && mv tmp.mp4 SLUG_motion_sfx.mp4
 ```
-وتأكد إن أول إطار هو الغلاف (ffmpeg -i SLUG_motion_sfx.mp4 -frames:v 1 first.jpg وافتحه بـ Read).
+وتأكد إن الغلاف هو اللي يطلع عند الثانية 1 (ffmpeg -ss 1 -i SLUG_motion_sfx.mp4 -frames:v 1 first.jpg وافتحه بـ Read).
