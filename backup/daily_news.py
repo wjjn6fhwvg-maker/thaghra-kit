@@ -261,7 +261,7 @@ def main():
             rules = open(os.path.join(HERE, "urgent_rules.txt"), encoding="utf-8").read()
             a, b = prompt.find("## اختيار الخبر"), prompt.find("## المصادر")
             prompt = prompt[:a] + rules + prompt[b:]
-        prompt = prompt.replace("{TODAY}", now.strftime("%Y-%m-%d")).replace("{WEEKDAY}", days[now.weekday()]).replace("{RECENT}", recent).replace("{WEEK}", now.strftime("%V") + (" زوجي، يعني طبّقها هالأسبوع" if int(now.strftime("%V")) % 2 == 0 else " فردي، يعني لا تطبّقها هالأسبوع"))
+        prompt = prompt.replace("{TODAY}", now.strftime("%Y-%m-%d")).replace("{WEEKDAY}", days[now.weekday()]).replace("{RECENT}", recent).replace("{FRI}", ["قصة اختراق", "مصطلح أمني", "خرافة ولا حقيقة؟"][int(now.strftime("%V")) % 3]).replace("{WEEK}", now.strftime("%V") + (" زوجي، يعني طبّقها هالأسبوع" if int(now.strftime("%V")) % 2 == 0 else " فردي، يعني لا تطبّقها هالأسبوع"))
         data, links = ask_gemini(prompt)
         if URGENT and (not data.get("urgent") or "post" not in data):
             print("ما فيه خبر عاجل اليوم")
