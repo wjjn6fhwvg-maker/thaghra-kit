@@ -29,3 +29,4 @@ ffmpeg -y -loop 1 -t 1.5 -i SLUG_cover.png -f lavfi -t 1.5 -i anullsrc=r=44100:c
 sed -i 's/\.swipe{color:#F1F5F9}/.swipe{color:#0B1220;background:%(a)s;font-weight:700;font-size:40px;padding:12px 34px;border-radius:999px;box-shadow:0 0 24px rgba(%(ag)s,.55)}/' render.py
 ```
 وتأكد إنه اشتغل (`grep -c 'swipe{color:#0B1220' render.py` يطلع 1). الفيديو ما يتغيّر.
+   **تأكد من الاتجاه قبل الإرسال (إلزامي):** السهم لازم يأشّر لليسار (←)، لأن الصورة الجاية في انستقرام وتيك توك تجي لما تسحب بإصبعك لليسار. افتح صورة 1 بأداة Read وتأكد بعينك إن السهم يأشّر لليسار وإنه واضح ومو طالع برا الصورة، وقل في الرسالة بسطر إنك شيّكت على اتجاه السهم.
